@@ -1,0 +1,65 @@
+
+name: Cold Chain FDE - Python CI
+
+# When should GitHub run this workflow?
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+# Read-only repository permission
+permissions:
+  contents: read
+
+jobs:
+  automated-tests:
+
+    name: Run Python Automated Tests
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 15
+
+    # These placeholders allow model clients to
+    # initialize without real credentials.
+    # Our unit tests must not call external APIs.
+    env:
+      OPENAI_API_KEY: "ci-placeholder-not-a-real-key"
+      PINECONE_API_KEY: "ci-placeholder-not-a-real-key"
+      RUN_LIVE_ROUTING_TESTS: "0"
+      RUN_LIVE_ANSWER_TESTS: "0"
+
+    steps:
+
+      # STEP 1: Download repository code
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # STEP 2: Install Python
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements-ci.txt
+
+      # STEP 3: Install required libraries
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-ci.txt
+
+      # STEP 4: Check Python syntax
+      - name: Check Python syntax
+        run: |
+          python -m compileall -q src/agent tests streamlit_app.py
+
+      # STEP 5: Run automated tests
+      - name: Run Pytest
+        run: |
+          python -m pytest tests -v
