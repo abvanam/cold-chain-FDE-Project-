@@ -3,7 +3,7 @@ import os
 import json
 from pathlib import Path
 from typing import Literal
-
+from functools import lru_cache
 import pyodbc
 from dotenv import load_dotenv
 
@@ -28,14 +28,33 @@ load_dotenv(project_root / ".env")
 # 2. Connect to Pinecone
 # --------------------------------------------------
 
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small"
-)
 
-vector_store = PineconeVectorStore(
-    index_name="fde-sop-index-openai",
-    embedding=embeddings
-)
+# --------------------------------------------------
+# 2. Connect to Pinecone only when needed
+# --------------------------------------------------
+
+@lru_cache(maxsize=1)
+def get_vector_store():
+    """
+    Initialize Pinecone only when an SOP search
+    is requested.
+
+    Reuse the connection for subsequent searches.
+    """
+
+    print("Initializing Pinecone vector store...")
+
+    embeddings = OpenAIEmbeddings(
+        model="text-embedding-3-small"
+    )
+
+    vector_store = PineconeVectorStore(
+        index_name="fde-sop-index-openai",
+        embedding=embeddings
+    )
+
+    return vector_store
+
 
 
 # --------------------------------------------------
@@ -240,6 +259,7 @@ def get_high_delay_observations(
 # 6. Tool 3 - Search SOPs in Pinecone
 # --------------------------------------------------
 
+
 @tool
 def search_sop(
     question: str,
@@ -262,21 +282,28 @@ def search_sop(
 
     print(f"TOOL EXECUTED: search_sop ({topic})")
 
+    # STEP 1: Build the Pinecone metadata filter
     search_filter = (
         {"topic": {"$eq": topic}}
         if topic != "general"
         else None
     )
 
+    # STEP 2: Initialize Pinecone only when needed
+    vector_store = get_vector_store()
+
+    # STEP 3: Retrieve relevant SOP documents
     documents = vector_store.similarity_search(
         question,
         k=3,
         filter=search_filter
     )
 
+    # STEP 4: Handle empty search results
     if not documents:
         return "No matching SOP documentation was found."
 
+    # STEP 5: Return SOP content with source details
     return "\n\n".join(
         f"Source: {doc.metadata.get('source_file', 'unknown')}\n"
         f"{doc.page_content}"
