@@ -46,13 +46,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: requirements-ci.txt
+          cache-dependency-path: requirements.txt
 
       # STEP 3: Install required libraries
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-ci.txt
+          python -m pip install -r requirements.txt
 
       # STEP 4: Check Python syntax
       - name: Check Python syntax
