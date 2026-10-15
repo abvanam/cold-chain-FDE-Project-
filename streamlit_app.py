@@ -110,14 +110,7 @@ if "thread_id" not in st.session_state:
 # 7. DISPLAY PREVIOUS MESSAGES
 # ==========================================
 
-for message in st.session_state.chat_history:
 
-    with st.chat_message(message["role"]):
-
-        st.markdown(message["content"])
-
-        if message["role"] == "assistant":
-            show_sources(message.get("sources", []))
 
 
 # Extract sources used in the most recent agent response
@@ -245,6 +238,15 @@ def show_sources(sources):
                     source["sections"] or ["Not identified"]
                 )
 
+
+for message in st.session_state.chat_history:
+
+    with st.chat_message(message["role"]):
+
+        st.markdown(message["content"])
+
+        if message["role"] == "assistant":
+            show_sources(message.get("sources", []))
 
 # ==========================================
 # 8. ACCEPT USER INPUT
